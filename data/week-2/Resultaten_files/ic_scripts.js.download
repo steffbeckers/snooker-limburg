@@ -1,0 +1,68 @@
+jQuery(document).ready(function ($) {
+
+    $(".detailbtn").delay(1500).fadeIn(2000);
+
+    $(".detailbtn").click(function(e) {
+        var detailid = "dtl" + $(this).attr("id");
+	    $(".matchdetail").hide("2000");
+	    $(".matchdetail .active").removeClass("active");
+	    var mouseheight = (e.pageY-420)+"px";
+	    $("#"+detailid).css('top', mouseheight);
+        $("#"+detailid).addClass("active");
+        $("#"+detailid).show("1000");
+    });
+
+    $(document).on("click", ".detailclosebtn", function(){
+        $(".matchdetail").hide("200");
+		//$(".matchdetail").css("display", "none");
+        $(".matchdetail .active").removeClass("active");
+    });
+
+    $('.showallbtn').click(function() {
+        var hiddenid = $(this).attr("id");
+        if($(this).text() == "Recente resultaten")
+        {
+            $(".ic-hidden").hide();
+            $(this).text("Alle resultaten");
+        }
+        else
+        {
+            $(".ic-"+hiddenid).show("400");
+            $(this).text("Recente resultaten");
+        }
+    });
+
+    $('.btnread').click(function() {
+        var txtid = $(this).attr("id");
+        if ($(this).hasClass("btndown")) {
+            $(this).removeClass("btndown");
+            $(this).addClass("btnup");
+            $(".txt-"+txtid).show("200");
+        }
+        else
+        {
+            $(this).removeClass("btnup");
+            $(this).addClass("btndown");
+            $(".txt-"+txtid).hide("200");
+        }
+    });
+
+    $('.btntdetail').click(function() {
+        var torid = $(this).attr("id");
+
+        if ($(this).hasClass("btndown")) {
+            $('.btntdetail').removeClass("btnup");
+            $('.btntdetail').addClass("btndown");
+            $('.torinfo').hide();
+            $(this).removeClass("btndown");
+            $(this).addClass("btnup");
+            $('.tor-'+torid).show("200");
+        }
+        else
+        {
+            $(this).removeClass("btnup");
+            $(this).addClass("btndown");
+            $('.torinfo').hide();
+        }
+    });
+});
