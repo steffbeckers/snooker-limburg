@@ -3,6 +3,7 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
+using HtmlAgilityPack;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Logging;
 
@@ -31,8 +32,15 @@ public class InterclubResultNotifier
 
         string content = await response.Content.ReadAsStringAsync();
 
-        string contentMD5Hash = content.CreateMD5();
+        await File.WriteAllTextAsync("results.html", content);
 
-        logger.LogInformation($"MD5: {contentMD5Hash}");
+        HtmlDocument htmlDocument = new HtmlDocument();
+        htmlDocument.LoadHtml(content);
+
+        foreach (HtmlNode updateNode in htmlDocument.DocumentNode.SelectNodes("//p[@class='update']"))
+        {
+            string value = updateNode.InnerText;
+            logger.LogInformation(value);
+        }
     }
 }
