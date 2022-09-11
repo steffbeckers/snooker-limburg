@@ -1,8 +1,11 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Azure;
+using Azure.Data.Tables;
 using HtmlAgilityPack;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Logging;
@@ -15,7 +18,10 @@ public class InterclubResultNotifier
     // */5 * * * * * // 5 seconds
     // 0 */1 * * * * // 1 minute
     [FunctionName("InterclubResultNotifier")]
-    public async Task Run([TimerTrigger("*/5 * * * * *")] TimerInfo timer, ILogger logger)
+    public async Task Run(
+        [TimerTrigger("*/5 * * * * *")] TimerInfo timer,
+        [Table("InterclubResultNotifierUpdates")] TableClient updatesTableClient,
+        ILogger logger)
     {
         logger.LogInformation($"Interclub result notifier executed at: {DateTime.Now}");
 
@@ -37,10 +43,32 @@ public class InterclubResultNotifier
         HtmlDocument htmlDocument = new HtmlDocument();
         htmlDocument.LoadHtml(content);
 
-        foreach (HtmlNode updateNode in htmlDocument.DocumentNode.SelectNodes("//p[@class='update']"))
+        foreach (var (node, index) in htmlDocument.DocumentNode.SelectNodes("//p[@class='update']").Select((node, index) => (node, index)))
         {
-            string value = updateNode.InnerText;
-            logger.LogInformation(value);
+            string dateAsString = node.InnerText.Replace("update ", string.Empty);
+
+            DateTimeOffset date = DateTimeOffset.ParseExact(dateAsString, "yyyy-MM-dd HH:mm", null);
+
+            string lastUpdatedKey = "LastUpdated";
+            TableEntity updateEntity = await updatesTableClient.GetEntityAsync<TableEntity>(string.Empty, index.ToString());
+
+            if (updateEntity != null)
+            {
+                if ((DateTimeOffset)updateEntity[lastUpdatedKey] != date)
+                {
+                    updateEntity[lastUpdatedKey] = date;
+                    await updatesTableClient.UpdateEntityAsync(updateEntity, ETag.All);
+
+                    // TODO: Send notification
+                }
+            }
+            else
+            {
+                updateEntity = new TableEntity(string.Empty, index.ToString());
+                updateEntity.Add(lastUpdatedKey, date);
+
+                await updatesTableClient.AddEntityAsync(updateEntity);
+            }
         }
     }
 }
