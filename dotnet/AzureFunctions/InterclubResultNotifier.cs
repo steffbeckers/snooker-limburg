@@ -19,7 +19,7 @@ public class InterclubResultNotifier
     // 0 */1 * * * * // 1 minute
     [FunctionName("InterclubResultNotifier")]
     public async Task Run(
-        [TimerTrigger("*/5 * * * * *")] TimerInfo timer,
+        [TimerTrigger("0 0 */1 * * *")] TimerInfo timer,
         [Table("InterclubResultNotifierUpdates")] TableClient updatesTableClient,
         ILogger logger)
     {
