@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 using Azure;
 using Azure.Data.Tables;
@@ -57,7 +58,7 @@ public class InterclubResultNotifier
                     updateEntity[lastUpdatedKey] = date;
                     await updatesTableClient.UpdateEntityAsync(updateEntity, ETag.All);
 
-                    // TODO: Send notification
+                    await CalculateNewResultAsync(htmlDocument, division: index + 1);
                 }
             }
             else
@@ -66,7 +67,29 @@ public class InterclubResultNotifier
                 updateEntity.Add(lastUpdatedKey, date);
 
                 await updatesTableClient.AddEntityAsync(updateEntity);
+
+                await CalculateNewResultAsync(htmlDocument, division: index + 1);
             }
         }
+    }
+
+    private Task CalculateNewResultAsync(HtmlDocument htmlDocument, int division)
+    {
+        HtmlNodeCollection htmlNodes = htmlDocument.DocumentNode.SelectNodes($"//table[@class='ic-result ic-rks{division}']//tr//td");
+
+        StringBuilder results = new StringBuilder();
+
+        foreach (var htmlNode in htmlNodes)
+        {
+            if (htmlNode.OuterHtml.Contains("datum") || htmlNode.InnerText == string.Empty)
+            {
+                continue;
+            }
+
+            results.Append(htmlNode.InnerText);
+            results.Append("|");
+        }
+
+        return Task.CompletedTask;
     }
 }
