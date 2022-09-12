@@ -38,9 +38,6 @@ public class InterclubResultNotifier
 
         string content = await response.Content.ReadAsStringAsync();
 
-        // TODO: Remove?
-        //await File.WriteAllTextAsync("results.html", content);
-
         HtmlDocument htmlDocument = new HtmlDocument();
         htmlDocument.LoadHtml(content);
 
