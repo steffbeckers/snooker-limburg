@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -20,16 +21,13 @@ public class InterclubResultNotifier
     private TableClient _resultsTableClient;
     private TimerInfo _timer;
     private TableClient _updatesTableClient;
+    private TimeSpan _dateTimeOffset = TimeZoneInfo.FindSystemTimeZoneById("Romance Standard Time").GetUtcOffset(DateTime.Now);
 
     [FunctionName("InterclubResultNotifier")]
     public async Task Run(
         ILogger logger,
         [Table("InterclubResultNotifierResults")] TableClient resultsTableClient,
-        // Timer
-        // */5 * * * * * // 5 seconds
-        // 0 */1 * * * * // 1 minute
-        // 0 0 */1 * * * // 1 hour
-        [TimerTrigger("0 0 */1 * * *")] TimerInfo timer,
+        [TimerTrigger("0 */1 * * * *")] TimerInfo timer,
         [Table("InterclubResultNotifierUpdates")] TableClient updatesTableClient)
     {
         _logger = logger;
@@ -37,7 +35,7 @@ public class InterclubResultNotifier
         _timer = timer;
         _updatesTableClient = updatesTableClient;
 
-        _logger.LogInformation($"Interclub result notifier executed at: {DateTime.Now}");
+        _logger.LogInformation($"Interclub result notifier executed at: {new DateTimeOffset(DateTime.Now, _dateTimeOffset)}");
 
         await CheckResultsAsync();
     }
@@ -64,36 +62,37 @@ public class InterclubResultNotifier
         {
             string dateAsString = node.InnerText.Replace("update ", string.Empty);
 
-            DateTimeOffset date = DateTimeOffset.ParseExact(dateAsString, "yyyy-MM-dd HH:mm", null);
+            DateTime dateTime = DateTime.ParseExact(dateAsString, "yyyy-MM-dd HH:mm", null);
+            DateTimeOffset dateTimeOffset = new DateTimeOffset(dateTime, _dateTimeOffset);
 
             string lastUpdatedKey = "LastUpdated";
             TableEntity updateEntity = await _updatesTableClient.GetEntityAsync<TableEntity>(string.Empty, index.ToString());
 
             if (updateEntity != null)
             {
-                if ((DateTimeOffset)updateEntity[lastUpdatedKey] != date)
+                if ((DateTimeOffset)updateEntity[lastUpdatedKey] != dateTimeOffset)
                 {
-                    updateEntity[lastUpdatedKey] = date;
+                    updateEntity[lastUpdatedKey] = dateTimeOffset;
                     await _updatesTableClient.UpdateEntityAsync(updateEntity, ETag.All);
 
-                    await CalculateNewResultAsync(htmlDocument, division: index + 1);
+                    await CalculateNewResultAsync(htmlDocument, division: index);
                 }
             }
             else
             {
                 updateEntity = new TableEntity(string.Empty, index.ToString());
-                updateEntity.Add(lastUpdatedKey, date);
+                updateEntity.Add(lastUpdatedKey, dateTimeOffset);
 
                 await _updatesTableClient.AddEntityAsync(updateEntity);
 
-                await CalculateNewResultAsync(htmlDocument, division: index + 1);
+                await CalculateNewResultAsync(htmlDocument, division: index);
             }
         }
     }
 
     private async Task CalculateNewResultAsync(HtmlDocument htmlDocument, int division)
     {
-        HtmlNodeCollection htmlNodes = htmlDocument.DocumentNode.SelectNodes($"//table[@class='ic-result ic-rks{division}']//tr//td");
+        HtmlNodeCollection htmlNodes = htmlDocument.DocumentNode.SelectNodes($"//table[@class='ic-result ic-rks{division + 1}']//tr//td");
 
         List<InterclubResultNotifierResult> results = new List<InterclubResultNotifierResult>();
         InterclubResultNotifierResult result = new InterclubResultNotifierResult();
@@ -113,10 +112,12 @@ public class InterclubResultNotifier
             {
                 case 0:
                     result = new InterclubResultNotifierResult();
-                    result.Date = DateTimeOffset.ParseExact(
-                        htmlNode.InnerText.Split("&nbsp;")[1].ToString(),
-                        "dd-MM-yy",
-                        null);
+                    result.Date = new DateTimeOffset(
+                        DateTime.ParseExact(
+                            htmlNode.InnerText.Split("&nbsp;")[1].ToString(),
+                            "dd-MM-yy",
+                            null),
+                        _dateTimeOffset);
                     break;
 
                 case 1:
@@ -149,6 +150,7 @@ public class InterclubResultNotifier
             TableEntity resultEntity = new TableEntity(string.Empty, Guid.NewGuid().ToString());
             resultEntity.Add("MD5", result2.MD5);
             resultEntity.Add("Date", result2.Date);
+            resultEntity.Add("Division", MapDivisionToText(division));
             resultEntity.Add("Home", result2.Home);
             resultEntity.Add("HomeScore", result2.HomeScore);
             resultEntity.Add("AwayScore", result2.AwayScore);
@@ -173,6 +175,24 @@ public class InterclubResultNotifier
             }
 
             await _resultsTableClient.AddEntityAsync(resultEntity);
+        }
+    }
+
+    private string MapDivisionToText(int division)
+    {
+        switch (division)
+        {
+            case 0: return "Ere";
+            case 1: return "1ste";
+            case 2:
+            case 3:
+            case 4:
+            case 5:
+                return $"{division}de";
+
+            case 6: return "Zaterdag";
+            default:
+                return $"{division}de";
         }
     }
 }
