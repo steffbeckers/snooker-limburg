@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -15,17 +16,34 @@ namespace SnookerLimburg.AzureFunctions;
 
 public class InterclubResultNotifier
 {
-    // Timer
-    // */5 * * * * * // 5 seconds
-    // 0 */1 * * * * // 1 minute
+    private ILogger _logger;
+    private TableClient _resultsTableClient;
+    private TimerInfo _timer;
+    private TableClient _updatesTableClient;
+
     [FunctionName("InterclubResultNotifier")]
     public async Task Run(
+        ILogger logger,
+        [Table("InterclubResultNotifierResults")] TableClient resultsTableClient,
+        // Timer
+        // */5 * * * * * // 5 seconds
+        // 0 */1 * * * * // 1 minute
+        // 0 0 */1 * * * // 1 hour
         [TimerTrigger("0 0 */1 * * *")] TimerInfo timer,
-        [Table("InterclubResultNotifierUpdates")] TableClient updatesTableClient,
-        ILogger logger)
+        [Table("InterclubResultNotifierUpdates")] TableClient updatesTableClient)
     {
-        logger.LogInformation($"Interclub result notifier executed at: {DateTime.Now}");
+        _logger = logger;
+        _resultsTableClient = resultsTableClient;
+        _timer = timer;
+        _updatesTableClient = updatesTableClient;
 
+        _logger.LogInformation($"Interclub result notifier executed at: {DateTime.Now}");
+
+        await CheckResultsAsync();
+    }
+
+    private async Task CheckResultsAsync()
+    {
         Uri baseAddress = new Uri("https://www.snookerlimburg.be");
 
         CookieContainer cookieContainer = new CookieContainer();
@@ -49,14 +67,14 @@ public class InterclubResultNotifier
             DateTimeOffset date = DateTimeOffset.ParseExact(dateAsString, "yyyy-MM-dd HH:mm", null);
 
             string lastUpdatedKey = "LastUpdated";
-            TableEntity updateEntity = await updatesTableClient.GetEntityAsync<TableEntity>(string.Empty, index.ToString());
+            TableEntity updateEntity = await _updatesTableClient.GetEntityAsync<TableEntity>(string.Empty, index.ToString());
 
             if (updateEntity != null)
             {
                 if ((DateTimeOffset)updateEntity[lastUpdatedKey] != date)
                 {
                     updateEntity[lastUpdatedKey] = date;
-                    await updatesTableClient.UpdateEntityAsync(updateEntity, ETag.All);
+                    await _updatesTableClient.UpdateEntityAsync(updateEntity, ETag.All);
 
                     await CalculateNewResultAsync(htmlDocument, division: index + 1);
                 }
@@ -66,30 +84,95 @@ public class InterclubResultNotifier
                 updateEntity = new TableEntity(string.Empty, index.ToString());
                 updateEntity.Add(lastUpdatedKey, date);
 
-                await updatesTableClient.AddEntityAsync(updateEntity);
+                await _updatesTableClient.AddEntityAsync(updateEntity);
 
                 await CalculateNewResultAsync(htmlDocument, division: index + 1);
             }
         }
     }
 
-    private Task CalculateNewResultAsync(HtmlDocument htmlDocument, int division)
+    private async Task CalculateNewResultAsync(HtmlDocument htmlDocument, int division)
     {
         HtmlNodeCollection htmlNodes = htmlDocument.DocumentNode.SelectNodes($"//table[@class='ic-result ic-rks{division}']//tr//td");
 
-        StringBuilder results = new StringBuilder();
+        List<InterclubResultNotifierResult> results = new List<InterclubResultNotifierResult>();
+        InterclubResultNotifierResult result = new InterclubResultNotifierResult();
+        int columnIndex = 0;
 
         foreach (var htmlNode in htmlNodes)
         {
-            if (htmlNode.OuterHtml.Contains("datum") || htmlNode.InnerText == string.Empty)
+            if (htmlNode.InnerText == string.Empty)
+            {
+                results.Add(result);
+                columnIndex = 0;
+
+                continue;
+            }
+
+            switch (columnIndex)
+            {
+                case 0:
+                    result = new InterclubResultNotifierResult();
+                    result.Date = DateTimeOffset.ParseExact(
+                        htmlNode.InnerText.Split("&nbsp;")[1].ToString(),
+                        "dd-MM-yy",
+                        null);
+                    break;
+
+                case 1:
+                    result.Home = htmlNode.InnerText;
+                    break;
+
+                case 2:
+                    if (htmlNode.InnerHtml.Contains("<strong>"))
+                    {
+                        string[] scoreArr = htmlNode.InnerText.Split("-");
+
+                        result.HomeScore = int.Parse(scoreArr[0].Trim());
+                        result.AwayScore = int.Parse(scoreArr[1].Trim());
+                    }
+
+                    break;
+
+                case 3:
+                    result.Away = htmlNode.InnerText;
+                    break;
+            }
+
+            columnIndex++;
+        }
+
+        foreach (InterclubResultNotifierResult result2 in results)
+        {
+            if (!result2.HomeScore.HasValue || !result2.AwayScore.HasValue) { continue; }
+
+            TableEntity resultEntity = new TableEntity(string.Empty, Guid.NewGuid().ToString());
+            resultEntity.Add("MD5", result2.MD5);
+            resultEntity.Add("Date", result2.Date);
+            resultEntity.Add("Home", result2.Home);
+            resultEntity.Add("HomeScore", result2.HomeScore);
+            resultEntity.Add("AwayScore", result2.AwayScore);
+            resultEntity.Add("Away", result2.Away);
+
+            var existingEntityQuery = _resultsTableClient.QueryAsync<TableEntity>(filter: $"PartitionKey eq '' and MD5 eq '{result2.MD5}'", maxPerPage: 1);
+            TableEntity existingEntity = null;
+
+            await foreach (var page in existingEntityQuery.AsPages())
+            {
+                if (existingEntity != null)
+                {
+                    continue;
+                }
+
+                existingEntity = page.Values.FirstOrDefault();
+            }
+
+            if (existingEntity != null)
             {
                 continue;
             }
 
-            results.Append(htmlNode.InnerText);
-            results.Append("|");
+            await _resultsTableClient.AddEntityAsync(resultEntity);
         }
-
-        return Task.CompletedTask;
     }
 }
