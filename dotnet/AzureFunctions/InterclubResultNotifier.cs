@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Azure;
 using Azure.Data.Tables;
+using Azure.Storage.Queues;
 using HtmlAgilityPack;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Logging;
@@ -21,18 +22,21 @@ public class InterclubResultNotifier
     private TableClient _resultsTableClient;
     private TimerInfo _timer;
     private TableClient _updatesTableClient;
+    private QueueClient _notificationsQueueClient;
 
     [FunctionName("InterclubResultNotifier")]
     public async Task Run(
         ILogger logger,
         [Table("InterclubResultNotifierResults")] TableClient resultsTableClient,
         [TimerTrigger("0 */1 * * * *")] TimerInfo timer,
-        [Table("InterclubResultNotifierUpdates")] TableClient updatesTableClient)
+        [Table("InterclubResultNotifierUpdates")] TableClient updatesTableClient,
+        [Queue("interclubresultnotifiernotifications")] QueueClient notificationsQueueClient)
     {
         _logger = logger;
         _resultsTableClient = resultsTableClient;
         _timer = timer;
         _updatesTableClient = updatesTableClient;
+        _notificationsQueueClient = notificationsQueueClient;
 
         _logger.LogInformation($"Interclub result notifier executed at: {DateTime.Now}");
 
@@ -170,6 +174,11 @@ public class InterclubResultNotifier
             }
 
             await _resultsTableClient.AddEntityAsync(resultEntity);
+
+            // Send notification
+            await _notificationsQueueClient.SendMessageAsync(
+                $"{MapDivisionToText(division)} afdeling" + Environment.NewLine +
+                $"{result2.Home} {result2.HomeScore} - {result2.AwayScore} {result2.Away}");
         }
     }
 
