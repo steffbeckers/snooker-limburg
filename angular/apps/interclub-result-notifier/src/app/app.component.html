@@ -1,1 +1,4 @@
-
+<ng-container *ngIf="swPush.isEnabled">
+    <button *ngIf="!swPush.subscription" type="button" (click)="receiveNotifications()">Receive notifications</button>
+    <button *ngIf="swPush.subscription" type="button" (click)="stopReceivingNotifiations()">Stop receiving notifications</button>
+</ng-container>
