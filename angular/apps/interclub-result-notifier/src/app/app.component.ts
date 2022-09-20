@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { SwPush } from '@angular/service-worker';
+import { environment } from '../environments/environment';
 
 @Component({
   selector: 'snooker-limburg-root',
@@ -9,9 +10,15 @@ import { SwPush } from '@angular/service-worker';
 export class AppComponent {
   constructor(public swPush: SwPush) {}
 
-  receiveNotifications(): void {
-    this.swPush.requestSubscription({ serverPublicKey: 'BP4eujZym5wbx93H0W9jfIImBNun0GNZPA0ytd2wTeldb7cgHKYvNa1NRtJdAJ8d3e3JYojXug7AXVVh89q1HYg' })
-      .then((sub: PushSubscription) => console.log("PushSubscription", sub));
+  async receiveNotifications(): Promise<void> {
+    const sub: PushSubscription = await this.swPush.requestSubscription({ serverPublicKey: environment.publicKey })
+
+    const response = await fetch(environment.endpoint, {
+      method: 'POST',
+      body: JSON.stringify(sub)
+    })
+
+    console.log(response);
   }
 
   stopReceivingNotifiations(): void {

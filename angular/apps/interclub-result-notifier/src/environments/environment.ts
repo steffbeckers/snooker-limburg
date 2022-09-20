@@ -4,6 +4,8 @@
 
 export const environment = {
   production: false,
+  endpoint: 'http://localhost:7071/api/InterclubResultNotifierSubscriptionHub',
+  publicKey: 'BP4eujZym5wbx93H0W9jfIImBNun0GNZPA0ytd2wTeldb7cgHKYvNa1NRtJdAJ8d3e3JYojXug7AXVVh89q1HYg'
 };
 
 /*
