@@ -1,3 +1,5 @@
+<h1>Snooker Limburg</h1>
+<h2>Interclub Result Notifier</h2>
 <ng-container *ngIf="swPush.isEnabled">
   <ng-container *ngIf="(swPush.subscription | async) === null">
     <button type="button" (click)="receiveNotifications()">Receive notifications</button>
@@ -7,5 +9,5 @@
   </ng-container>
 </ng-container>
 <ng-container *ngIf="!swPush.isEnabled">
-  Your browser doesn't support notifications. Try Chrome?
+  <p>Your browser doesn't support notifications. Try Chrome?</p>
 </ng-container>
