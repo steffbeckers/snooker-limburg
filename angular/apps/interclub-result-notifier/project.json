@@ -6,7 +6,9 @@
   "targets": {
     "build": {
       "executor": "@angular-devkit/build-angular:browser",
-      "outputs": ["{options.outputPath}"],
+      "outputs": [
+        "{options.outputPath}"
+      ],
       "options": {
         "outputPath": "dist/apps/interclub-result-notifier",
         "index": "apps/interclub-result-notifier/src/index.html",
@@ -18,8 +20,12 @@
           "apps/interclub-result-notifier/src/favicon.ico",
           "apps/interclub-result-notifier/src/assets"
         ],
-        "styles": ["apps/interclub-result-notifier/src/styles.scss"],
-        "scripts": []
+        "styles": [
+          "apps/interclub-result-notifier/src/styles.scss"
+        ],
+        "scripts": [],
+        "serviceWorker": true,
+        "ngswConfigPath": "apps/interclub-result-notifier/ngsw-config.json"
       },
       "configurations": {
         "production": {
@@ -83,7 +89,9 @@
     },
     "test": {
       "executor": "@nrwl/jest:jest",
-      "outputs": ["coverage/apps/interclub-result-notifier"],
+      "outputs": [
+        "coverage/apps/interclub-result-notifier"
+      ],
       "options": {
         "jestConfig": "apps/interclub-result-notifier/jest.config.ts",
         "passWithNoTests": true
