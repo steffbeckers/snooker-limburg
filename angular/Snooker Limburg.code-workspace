@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+            "name": "Angular",
+			"path": "."
+		},
+        {
+            "name": "Root",
+			"path": ".."
+		}
+    ],
+    "settings": {}
+}

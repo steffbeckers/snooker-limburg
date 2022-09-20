@@ -14,9 +14,9 @@ using HtmlAgilityPack;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Logging;
 
-namespace SnookerLimburg.AzureFunctions;
+namespace SnookerLimburg.AzureFunctions.InterclubResultNotifier;
 
-public class InterclubResultNotifier
+public class Watcher
 {
     private ILogger _logger;
     private TableClient _resultsTableClient;
@@ -24,7 +24,7 @@ public class InterclubResultNotifier
     private TableClient _updatesTableClient;
     private QueueClient _notificationsQueueClient;
 
-    [FunctionName("InterclubResultNotifier")]
+    [FunctionName("InterclubResultNotifierWatcher")]
     public async Task Run(
         ILogger logger,
         [Table("InterclubResultNotifierResults")] TableClient resultsTableClient,
@@ -95,8 +95,8 @@ public class InterclubResultNotifier
     {
         HtmlNodeCollection htmlNodes = htmlDocument.DocumentNode.SelectNodes($"//table[@class='ic-result ic-rks{division + 1}']//tr//td");
 
-        List<InterclubResultNotifierResult> results = new List<InterclubResultNotifierResult>();
-        InterclubResultNotifierResult result = new InterclubResultNotifierResult();
+        List<Result> results = new List<Result>();
+        Result result = new Result();
         int columnIndex = 0;
 
         foreach (var htmlNode in htmlNodes)
@@ -112,7 +112,7 @@ public class InterclubResultNotifier
             switch (columnIndex)
             {
                 case 0:
-                    result = new InterclubResultNotifierResult();
+                    result = new Result();
                     result.Date = DateTimeOffset.ParseExact(
                         $"{htmlNode.InnerText.Split("&nbsp;")[1]} +2",
                         "dd-MM-yy z",
@@ -142,7 +142,7 @@ public class InterclubResultNotifier
             columnIndex++;
         }
 
-        foreach (InterclubResultNotifierResult result2 in results)
+        foreach (Result result2 in results)
         {
             if (!result2.HomeScore.HasValue || !result2.AwayScore.HasValue) { continue; }
 

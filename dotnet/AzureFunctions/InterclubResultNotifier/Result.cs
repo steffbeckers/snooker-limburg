@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using SnookerLimburg.Extensions;
+using System;
 
-namespace SnookerLimburg.AzureFunctions;
+namespace SnookerLimburg.AzureFunctions.InterclubResultNotifier;
 
-public class InterclubResultNotifierResult
+public class Result
 {
     public string Away { get; set; }
     public int? AwayScore { get; set; }

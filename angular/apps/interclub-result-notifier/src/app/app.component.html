@@ -1,1 +1,19 @@
-<snooker-limburg-nx-welcome></snooker-limburg-nx-welcome>
+<div class="container">
+  <h1>Snooker Limburg</h1>
+  <h2>Interclub Result Notifier</h2>
+  <ng-container *ngIf="swPush.isEnabled">
+    <ng-container *ngIf="(swPush.subscription | async) === null">
+      <button class="btn btn-primary d-flex gap-2" type="button" (click)="receiveNotifications()">
+        <i class="bi bi-bell-fill"></i><span>Receive notifications</span>
+      </button>
+    </ng-container>
+    <ng-container *ngIf="(swPush.subscription | async) !== null">
+      <button class="btn btn-primary d-flex gap-2" type="button" (click)="stopReceivingNotifiations()">
+        <i class="bi bi-bell-slash-fill"></i><span>Stop receiving notifications</span>
+      </button>
+    </ng-container>
+  </ng-container>
+  <ng-container *ngIf="!swPush.isEnabled">
+    <p>Your browser doesn't support notifications. Try Chrome?</p>
+  </ng-container>
+</div>
