@@ -28,7 +28,7 @@ public class Watcher
     public async Task Run(
         ILogger logger,
         [Table("InterclubResultNotifierResults")] TableClient resultsTableClient,
-        [TimerTrigger("0 */1 * * * *")] TimerInfo timer,
+        [TimerTrigger("0 */5 * * * *")] TimerInfo timer,
         [Table("InterclubResultNotifierUpdates")] TableClient updatesTableClient,
         [Queue("interclubresultnotifiernotifications")] QueueClient notificationsQueueClient)
     {
