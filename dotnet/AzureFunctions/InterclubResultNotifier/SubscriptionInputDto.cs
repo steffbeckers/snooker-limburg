@@ -8,6 +8,7 @@ namespace SnookerLimburg.AzureFunctions.InterclubResultNotifier;
 
 public class SubscriptionInputDto
 {
+    public bool enabled { get; set; }
     public string endpoint { get; set; }
     public DateTime? expirationTime { get; set; }
     public Keys keys { get; set; }

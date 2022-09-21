@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { SwPush } from '@angular/service-worker';
 import { environment } from '../environments/environment';
+import { first } from 'rxjs';
 
 @Component({
   selector: 'snooker-limburg-root',
@@ -15,13 +16,26 @@ export class AppComponent {
 
     const response = await fetch(environment.endpoint, {
       method: 'POST',
-      body: JSON.stringify(sub)
+      body: JSON.stringify({ ...sub.toJSON(), enabled: true })
     })
 
     console.log(response);
   }
 
-  stopReceivingNotifiations(): void {
-    this.swPush.unsubscribe().then();
+  async stopReceivingNotifiations(): Promise<void> {
+    this.swPush.subscription
+      .pipe(first())
+      .subscribe(async (sub: PushSubscription | null) => {
+      if (!sub) return;
+
+      await this.swPush.unsubscribe();
+
+      const response = await fetch(environment.endpoint, {
+        method: 'POST',
+        body: JSON.stringify({ ...sub.toJSON(), enabled: false })
+      })
+
+      console.log(response);
+    });
   }
 }
