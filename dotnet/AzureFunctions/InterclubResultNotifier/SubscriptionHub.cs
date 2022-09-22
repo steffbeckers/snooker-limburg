@@ -38,8 +38,7 @@ public static class SubscriptionHub
 
         if (input.enabled)
         {
-            // TODO: Endpoint not working?
-            TableEntity pushSubscriptionEntity = new TableEntity(string.Empty, pushSubscription.Endpoint);
+            TableEntity pushSubscriptionEntity = new TableEntity(string.Empty, pushSubscription.Auth);
             pushSubscriptionEntity.Add("Endpoint", pushSubscription.Endpoint);
             pushSubscriptionEntity.Add("P256DH", pushSubscription.P256DH);
             pushSubscriptionEntity.Add("Auth", pushSubscription.Auth);
@@ -50,7 +49,7 @@ public static class SubscriptionHub
         }
         else
         {
-            await subscriptionsTableClient.DeleteEntityAsync(string.Empty, pushSubscription.Endpoint);
+            await subscriptionsTableClient.DeleteEntityAsync(string.Empty, pushSubscription.Auth);
         }
 
         return new OkResult();
