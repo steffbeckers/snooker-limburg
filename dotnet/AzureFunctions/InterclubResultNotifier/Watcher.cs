@@ -38,7 +38,7 @@ public class Watcher
         _updatesTableClient = updatesTableClient;
         _notificationsQueueClient = notificationsQueueClient;
 
-        _logger.LogInformation($"Interclub result notifier executed at: {DateTime.Now}");
+        _logger.LogInformation($"Interclub result notifier watcher executed at: {DateTime.Now}");
 
         await CheckResultsAsync();
     }
