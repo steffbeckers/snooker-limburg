@@ -14,12 +14,10 @@ export class AppComponent {
   async receiveNotifications(): Promise<void> {
     const sub: PushSubscription = await this.swPush.requestSubscription({ serverPublicKey: environment.publicKey })
 
-    const response = await fetch(environment.endpoint, {
+    await fetch(environment.endpoint, {
       method: 'POST',
       body: JSON.stringify({ ...sub.toJSON(), enabled: true })
-    })
-
-    console.log(response);
+    });
   }
 
   async stopReceivingNotifiations(): Promise<void> {
@@ -30,12 +28,10 @@ export class AppComponent {
 
       await this.swPush.unsubscribe();
 
-      const response = await fetch(environment.endpoint, {
+      await fetch(environment.endpoint, {
         method: 'POST',
         body: JSON.stringify({ ...sub.toJSON(), enabled: false })
       })
-
-      console.log(response);
     });
   }
 }
