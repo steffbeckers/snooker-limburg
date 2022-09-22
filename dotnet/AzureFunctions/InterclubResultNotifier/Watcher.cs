@@ -13,6 +13,7 @@ using Azure.Storage.Queues;
 using HtmlAgilityPack;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace SnookerLimburg.AzureFunctions.InterclubResultNotifier;
 
@@ -176,9 +177,17 @@ public class Watcher
             await _resultsTableClient.AddEntityAsync(resultEntity);
 
             // Send notification
-            await _notificationsQueueClient.SendMessageAsync(
-                $"{MapDivisionToText(division)} afdeling" + Environment.NewLine +
-                $"{result2.Home} {result2.HomeScore} - {result2.AwayScore} {result2.Away}");
+            Notification notification = new Notification()
+            {
+                notification = new NotificationData()
+                {
+                    title = "Snooker Limburg",
+                    body = $"Nieuw interclub resultaat in {MapDivisionToText(division)} afdeling" + Environment.NewLine +
+                        $"{result2.Home} {result2.HomeScore} - {result2.AwayScore} {result2.Away}"
+                }
+            };
+            string message = JsonConvert.SerializeObject(notification);
+            await _notificationsQueueClient.SendMessageAsync(message);
         }
     }
 
