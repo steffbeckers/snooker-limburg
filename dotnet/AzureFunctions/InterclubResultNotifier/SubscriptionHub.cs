@@ -1,4 +1,3 @@
-using System;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -13,10 +12,10 @@ using Azure.Data.Tables;
 
 namespace SnookerLimburg.AzureFunctions.InterclubResultNotifier;
 
-public static class SubscriptionHub
+public class SubscriptionHub
 {
     [FunctionName("InterclubResultNotifierSubscriptionHub")]
-    public static async Task<IActionResult> Run(
+    public async Task<IActionResult> Run(
         ILogger logger,
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)] HttpRequest req,
         [Table("InterclubResultNotifierSubscriptions")] TableClient subscriptionsTableClient)
@@ -55,7 +54,7 @@ public static class SubscriptionHub
         return new OkResult();
     }
 
-    private static async Task SendTestNotificationAsync(
+    private async Task SendTestNotificationAsync(
         IConfiguration configuration,
         PushSubscription pushSubscription)
     {
